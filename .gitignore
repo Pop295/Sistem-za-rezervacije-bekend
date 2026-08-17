@@ -1,24 +1,12 @@
-# Build output
 bin/
 obj/
-
-# Visual Studio / VS Code
 .vs/
 .vscode/
-
-# User-specific files
 *.user
 *.suo
-
-# Environment / secrets
+appsettings.Production.json
+appsettings.Development.json
 .env
 .env.*
-!.env.example
-
-# Local configuration containing secrets
-appsettings.Development.json
-appsettings.Production.json
-
-# OS files
 .DS_Store
 Thumbs.db
