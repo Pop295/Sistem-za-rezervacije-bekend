@@ -85,6 +85,7 @@ public class AuthController : ControllerBase
     [Authorize]
     [HttpGet("me")]
     public IActionResult Me()
+    
     {
     var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
     var email = User.FindFirstValue(JwtRegisteredClaimNames.Email);
@@ -92,6 +93,13 @@ public class AuthController : ControllerBase
 
     return Ok(new { userId, email, role });
 }
+
+    [Authorize(Roles = "admin")]
+    [HttpGet("admin-only")]
+    public IActionResult AdminOnly()
+    {
+        return Ok(new { poruka = "Ako vidiš ovo, ti si admin." });
+    }
 
     private string GenerateJwtToken(User user, string roleName)
 {
