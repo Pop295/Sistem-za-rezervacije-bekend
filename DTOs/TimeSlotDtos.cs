@@ -8,3 +8,10 @@ public class TimeSlotDto
     public string Time { get; set; } = string.Empty;
     public bool IsAvailable { get; set; }
 }
+
+public class TimeSlotCreateDto
+{
+    public int ServiceId { get; set; }
+    public DateTime StartTime { get; set; }
+    public DateTime EndTime { get; set; }
+}
