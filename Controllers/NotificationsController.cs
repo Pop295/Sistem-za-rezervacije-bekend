@@ -39,4 +39,60 @@ public class NotificationsController : ControllerBase
 
         return Ok(notifications);
     }
+
+    [Authorize]
+    [HttpPut("{id}/read")]
+    public async Task<ActionResult<NotificationDto>> MarkAsRead(int id)
+    {
+        var userId = int.Parse(User.FindFirstValue(JwtRegisteredClaimNames.Sub)!);
+
+        var notification = await _context.Notifications.FirstOrDefaultAsync(n => n.Id == id);
+
+        if (notification == null)
+        {
+            return NotFound();
+        }
+
+        if (notification.UserId != userId)
+        {
+            return Forbid();
+        }
+
+        notification.IsRead = true;
+        await _context.SaveChangesAsync();
+
+        var result = new NotificationDto
+        {
+            Id = notification.Id,
+            Message = notification.Message,
+            IsRead = notification.IsRead,
+            CreatedAt = notification.CreatedAt
+        };
+
+        return Ok(result);
+    }
+
+    [Authorize]
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> Delete(int id)
+    {
+        var userId = int.Parse(User.FindFirstValue(JwtRegisteredClaimNames.Sub)!);
+
+        var notification = await _context.Notifications.FirstOrDefaultAsync(n => n.Id == id);
+
+        if (notification == null)
+        {
+            return NotFound();
+        }
+
+        if (notification.UserId != userId)
+        {
+            return Forbid();
+        }
+
+        _context.Notifications.Remove(notification);
+        await _context.SaveChangesAsync();
+
+        return NoContent();
+    }
 }
