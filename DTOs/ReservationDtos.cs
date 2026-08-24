@@ -8,3 +8,13 @@ public class ReservationDto
     public string Time { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
 }
+
+public class ReservationCreateDto
+{
+    public int TimeSlotId { get; set; }
+}
+
+public class ReservationStatusUpdateDto
+{
+    public string Status { get; set; } = string.Empty;
+}
