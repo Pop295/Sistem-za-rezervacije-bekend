@@ -8,3 +8,8 @@ public class UserListDto
     public string? Phone { get; set; }
     public string RoleName { get; set; } = string.Empty;
 }
+
+public class UserRoleUpdateDto
+{
+    public string RoleName { get; set; } = string.Empty;
+}
