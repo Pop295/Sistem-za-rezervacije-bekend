@@ -29,7 +29,8 @@ public class ServicesController : ControllerBase
                 Name = s.Name,
                 Description = s.Description,
                 DurationMinutes = s.DurationMinutes,
-                Price = s.Price
+                Price = s.Price,
+                TableCount = s.TableCount
             })
             .ToListAsync();
 
@@ -47,7 +48,8 @@ public class ServicesController : ControllerBase
                 Name = s.Name,
                 Description = s.Description,
                 DurationMinutes = s.DurationMinutes,
-                Price = s.Price
+                Price = s.Price,
+                TableCount = s.TableCount
             })
             .FirstOrDefaultAsync();
 
@@ -69,6 +71,7 @@ public class ServicesController : ControllerBase
             Description = request.Description,
             DurationMinutes = request.DurationMinutes,
             Price = request.Price,
+            TableCount = request.TableCount,
             IsActive = true,
             CreatedAt = DateTime.UtcNow
         };
@@ -82,7 +85,8 @@ public class ServicesController : ControllerBase
             Name = service.Name,
             Description = service.Description,
             DurationMinutes = service.DurationMinutes,
-            Price = service.Price
+            Price = service.Price,
+            TableCount = service.TableCount
         };
 
         return CreatedAtAction(nameof(GetById), new { id = service.Id }, result);
@@ -103,6 +107,7 @@ public class ServicesController : ControllerBase
         service.Description = request.Description;
         service.DurationMinutes = request.DurationMinutes;
         service.Price = request.Price;
+        service.TableCount = request.TableCount;
 
         await _context.SaveChangesAsync();
 
@@ -112,7 +117,8 @@ public class ServicesController : ControllerBase
             Name = service.Name,
             Description = service.Description,
             DurationMinutes = service.DurationMinutes,
-            Price = service.Price
+            Price = service.Price,
+            TableCount = service.TableCount
         };
 
         return Ok(result);

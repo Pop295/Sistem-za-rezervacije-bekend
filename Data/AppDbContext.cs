@@ -154,6 +154,10 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.Price)
                 .HasPrecision(10, 2)
                 .HasColumnName("price");
+            entity.Property(e => e.TableCount)
+                .IsRequired()
+                .HasDefaultValueSql("1")
+                .HasColumnName("table_count");
         });
 
         modelBuilder.Entity<TimeSlot>(entity =>

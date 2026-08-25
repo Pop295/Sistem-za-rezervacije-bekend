@@ -7,6 +7,7 @@ public class ServiceDto
     public string? Description { get; set; }
     public int DurationMinutes { get; set; }
     public decimal Price { get; set; }
+    public int TableCount { get; set; }
 }
 
 public class ServiceCreateDto
@@ -15,4 +16,5 @@ public class ServiceCreateDto
     public string? Description { get; set; }
     public int DurationMinutes { get; set; }
     public decimal Price { get; set; }
+    public int TableCount { get; set; }
 }
