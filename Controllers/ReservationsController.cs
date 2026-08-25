@@ -40,6 +40,7 @@ public class ReservationsController : ControllerBase
                 r.Id,
                 r.Status,
                 r.TimeSlot.StartTime,
+                r.TimeSlot.TableNumber,
                 ServiceName = r.TimeSlot.Service.Name
             })
             .ToListAsync();
@@ -49,6 +50,7 @@ public class ReservationsController : ControllerBase
             {
                 Id = r.Id,
                 ServiceName = r.ServiceName,
+                TableNumber = r.TableNumber,
                 Date = r.StartTime.ToString("yyyy-MM-dd"),
                 Time = r.StartTime.ToString("HH:mm"),
                 Status = r.Status
@@ -58,35 +60,63 @@ public class ReservationsController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize]
+        [Authorize]
     [HttpPost]
     public async Task<ActionResult<ReservationDto>> Create(ReservationCreateDto request)
     {
         var userId = int.Parse(User.FindFirstValue(JwtRegisteredClaimNames.Sub)!);
 
-        var timeSlot = await _context.TimeSlots
-            .FirstOrDefaultAsync(t => t.Id == request.TimeSlotId);
-
-        if (timeSlot == null)
+        if (!DateTime.TryParse($"{request.Date} {request.StartTime}", out var startDateTime))
         {
-            return NotFound("Termin ne postoji.");
+            return BadRequest("Neispravan format datuma ili vremena.");
         }
 
-        if (timeSlot.IsAvailable != true)
+        var service = await _context.Services
+            .FirstOrDefaultAsync(s => s.Id == request.ServiceId && s.IsActive == true);
+
+        if (service == null)
         {
-            return Conflict("Taj sto je vec rezervisan u tom terminu.");
+            return BadRequest("Ne postoji aktivna prostorija sa tim ID-om.");
         }
+
+        if (request.TableNumber < 1 || request.TableNumber > service.TableCount)
+        {
+            return BadRequest($"Broj stola mora biti izmedju 1 i {service.TableCount}.");
+        }
+
+        var endDateTime = startDateTime.AddMinutes(service.DurationMinutes);
+
+        var hasOverlap = await _context.TimeSlots
+            .AnyAsync(t => t.ServiceId == request.ServiceId
+                && t.TableNumber == request.TableNumber
+                && t.IsAvailable == false
+                && t.StartTime < endDateTime
+                && startDateTime < t.EndTime);
+
+        if (hasOverlap)
+        {
+            return Conflict("Taj sto je vec rezervisan u izabranom terminu.");
+        }
+
+        var timeSlot = new TimeSlot
+        {
+            ServiceId = request.ServiceId,
+            TableNumber = request.TableNumber,
+            StartTime = startDateTime,
+            EndTime = endDateTime,
+            IsAvailable = false,
+            CreatedAt = DateTime.UtcNow
+        };
 
         var reservation = new Reservation
         {
             UserId = userId,
-            TimeSlotId = timeSlot.Id,
+            TimeSlot = timeSlot,
             Status = "confirmed",
             CreatedAt = DateTime.UtcNow
         };
 
-        timeSlot.IsAvailable = false;
-
+        _context.TimeSlots.Add(timeSlot);
         _context.Reservations.Add(reservation);
 
         try
@@ -95,15 +125,14 @@ public class ReservationsController : ControllerBase
         }
         catch (DbUpdateException)
         {
-            return Conflict("Taj sto je vec rezervisan u tom terminu.");
+            return Conflict("Taj sto je vec rezervisan u izabranom terminu.");
         }
-
-        var service = await _context.Services.FirstOrDefaultAsync(s => s.Id == timeSlot.ServiceId);
 
         var result = new ReservationDto
         {
             Id = reservation.Id,
-            ServiceName = service?.Name ?? string.Empty,
+            ServiceName = service.Name,
+            TableNumber = timeSlot.TableNumber,
             Date = timeSlot.StartTime.ToString("yyyy-MM-dd"),
             Time = timeSlot.StartTime.ToString("HH:mm"),
             Status = reservation.Status
@@ -185,6 +214,7 @@ public class ReservationsController : ControllerBase
         {
             Id = reservation.Id,
             ServiceName = reservation.TimeSlot.Service.Name,
+            TableNumber = reservation.TimeSlot.TableNumber,
             Date = reservation.TimeSlot.StartTime.ToString("yyyy-MM-dd"),
             Time = reservation.TimeSlot.StartTime.ToString("HH:mm"),
             Status = reservation.Status
