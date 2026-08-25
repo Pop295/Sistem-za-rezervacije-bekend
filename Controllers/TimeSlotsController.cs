@@ -27,6 +27,7 @@ public class TimeSlotsController : ControllerBase
             {
                 t.Id,
                 t.ServiceId,
+                t.TableNumber,
                 t.StartTime,
                 t.IsAvailable
             })
@@ -38,6 +39,7 @@ public class TimeSlotsController : ControllerBase
             {
                 Id = t.Id,
                 ServiceId = t.ServiceId,
+                TableNumber = t.TableNumber,
                 Date = t.StartTime.ToString("yyyy-MM-dd"),
                 Time = t.StartTime.ToString("HH:mm"),
                 IsAvailable = t.IsAvailable ?? false
@@ -56,17 +58,23 @@ public class TimeSlotsController : ControllerBase
             return BadRequest("Vreme zavrsetka mora biti posle vremena pocetka.");
         }
 
-        var serviceExists = await _context.Services
-            .AnyAsync(s => s.Id == request.ServiceId && s.IsActive == true);
+        var service = await _context.Services
+            .FirstOrDefaultAsync(s => s.Id == request.ServiceId && s.IsActive == true);
 
-        if (!serviceExists)
+        if (service == null)
         {
-            return BadRequest("Ne postoji aktivan sto sa tim ID-om.");
+            return BadRequest("Ne postoji aktivna prostorija sa tim ID-om.");
+        }
+
+        if (request.TableNumber < 1 || request.TableNumber > service.TableCount)
+        {
+            return BadRequest($"Broj stola mora biti izmedju 1 i {service.TableCount}.");
         }
 
         var timeSlot = new TimeSlot
         {
             ServiceId = request.ServiceId,
+            TableNumber = request.TableNumber,
             StartTime = request.StartTime,
             EndTime = request.EndTime,
             IsAvailable = true,
@@ -88,6 +96,7 @@ public class TimeSlotsController : ControllerBase
         {
             Id = timeSlot.Id,
             ServiceId = timeSlot.ServiceId,
+            TableNumber = timeSlot.TableNumber,
             Date = timeSlot.StartTime.ToString("yyyy-MM-dd"),
             Time = timeSlot.StartTime.ToString("HH:mm"),
             IsAvailable = timeSlot.IsAvailable ?? false
@@ -112,15 +121,21 @@ public class TimeSlotsController : ControllerBase
             return BadRequest("Vreme zavrsetka mora biti posle vremena pocetka.");
         }
 
-        var serviceExists = await _context.Services
-            .AnyAsync(s => s.Id == request.ServiceId && s.IsActive == true);
+        var service = await _context.Services
+            .FirstOrDefaultAsync(s => s.Id == request.ServiceId && s.IsActive == true);
 
-        if (!serviceExists)
+        if (service == null)
         {
-            return BadRequest("Ne postoji aktivan sto sa tim ID-om.");
+            return BadRequest("Ne postoji aktivna prostorija sa tim ID-om.");
+        }
+
+        if (request.TableNumber < 1 || request.TableNumber > service.TableCount)
+        {
+            return BadRequest($"Broj stola mora biti izmedju 1 i {service.TableCount}.");
         }
 
         timeSlot.ServiceId = request.ServiceId;
+        timeSlot.TableNumber = request.TableNumber;
         timeSlot.StartTime = request.StartTime;
         timeSlot.EndTime = request.EndTime;
 
@@ -137,6 +152,7 @@ public class TimeSlotsController : ControllerBase
         {
             Id = timeSlot.Id,
             ServiceId = timeSlot.ServiceId,
+            TableNumber = timeSlot.TableNumber,
             Date = timeSlot.StartTime.ToString("yyyy-MM-dd"),
             Time = timeSlot.StartTime.ToString("HH:mm"),
             IsAvailable = timeSlot.IsAvailable ?? false

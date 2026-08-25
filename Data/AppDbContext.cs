@@ -168,7 +168,7 @@ public partial class AppDbContext : DbContext
 
             entity.HasIndex(e => new { e.IsAvailable, e.StartTime }, "idx_timeslots_available");
 
-            entity.HasIndex(e => new { e.ServiceId, e.StartTime }, "uq_service_start").IsUnique();
+            entity.HasIndex(e => new { e.ServiceId, e.TableNumber, e.StartTime }, "uq_service_table_start").IsUnique();
 
             entity.Property(e => e.Id)
                 .HasColumnType("int(11)")
@@ -187,6 +187,10 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.ServiceId)
                 .HasColumnType("int(11)")
                 .HasColumnName("service_id");
+            entity.Property(e => e.TableNumber)
+                .IsRequired()
+                .HasDefaultValueSql("1")
+                .HasColumnName("table_number");
             entity.Property(e => e.StartTime)
                 .HasColumnType("datetime")
                 .HasColumnName("start_time");

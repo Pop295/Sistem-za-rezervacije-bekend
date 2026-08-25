@@ -9,6 +9,8 @@ public partial class TimeSlot
 
     public int ServiceId { get; set; }
 
+    public int TableNumber { get; set; }
+
     public DateTime StartTime { get; set; }
 
     public DateTime EndTime { get; set; }
