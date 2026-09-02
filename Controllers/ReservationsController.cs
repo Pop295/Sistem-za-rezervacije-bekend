@@ -60,7 +60,7 @@ public class ReservationsController : ControllerBase
         return Ok(result);
     }
 
-        [Authorize]
+    [Authorize]
     [HttpPost]
     public async Task<ActionResult<ReservationDto>> Create(ReservationCreateDto request)
     {
@@ -69,6 +69,11 @@ public class ReservationsController : ControllerBase
         if (!DateTime.TryParse($"{request.Date} {request.StartTime}", out var startDateTime))
         {
             return BadRequest("Neispravan format datuma ili vremena.");
+        }
+
+        if (startDateTime < DateTime.Now)
+        {
+            return BadRequest("Ne možete rezervisati termin koji je već prošao.");
         }
 
         var service = await _context.Services
@@ -127,6 +132,19 @@ public class ReservationsController : ControllerBase
         {
             return Conflict("Taj sto je vec rezervisan u izabranom terminu.");
         }
+
+        var notification = new Notification
+        {
+            UserId = userId,
+            ReservationId = reservation.Id,
+            Message = $"Rezervacija je uspešno kreirana: {service.Name}, sto br. {timeSlot.TableNumber}, " +
+                      $"{timeSlot.StartTime:dd.MM.yyyy.} u {timeSlot.StartTime:HH:mm}.",
+            IsRead = false,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        _context.Notifications.Add(notification);
+        await _context.SaveChangesAsync();
 
         var result = new ReservationDto
         {

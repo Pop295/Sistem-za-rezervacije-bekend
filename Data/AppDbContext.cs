@@ -88,6 +88,10 @@ public partial class AppDbContext : DbContext
                 .HasDefaultValueSql("current_timestamp()")
                 .HasColumnType("datetime")
                 .HasColumnName("created_at");
+            entity.Property(e => e.ReminderSent)
+                .IsRequired()
+                .HasDefaultValueSql("'0'")
+                .HasColumnName("reminder_sent");
             entity.Property(e => e.Status)
                 .HasDefaultValueSql("'confirmed'")
                 .HasColumnType("enum('pending','confirmed','cancelled','completed')")

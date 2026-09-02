@@ -1,4 +1,5 @@
 using Bekend.Data;
+using Bekend.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -54,6 +55,7 @@ builder.Services.AddSwaggerGen(options =>
     });
 }); 
 builder.Services.AddControllers();
+builder.Services.AddHostedService<ReservationReminderService>();
 
 var jwtKey = builder.Configuration["Jwt:Key"]!;
 var jwtIssuer = builder.Configuration["Jwt:Issuer"]!;

@@ -17,6 +17,8 @@ public partial class Reservation
 
     public DateTime? CancelledAt { get; set; }
 
+    public bool ReminderSent { get; set; }
+
     public virtual ICollection<Notification> Notifications { get; set; } = new List<Notification>();
 
     public virtual TimeSlot TimeSlot { get; set; } = null!;
