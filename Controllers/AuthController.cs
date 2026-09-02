@@ -94,6 +94,35 @@ public class AuthController : ControllerBase
     return Ok(new { userId, email, role });
 }
 
+    [Authorize]
+    [HttpPut("change-password")]
+    public async Task<IActionResult> ChangePassword(ChangePasswordRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.NewPassword) || request.NewPassword.Length < 6)
+        {
+            return BadRequest("Nova lozinka mora imati najmanje 6 karaktera.");
+        }
+
+        var userId = int.Parse(User.FindFirstValue(JwtRegisteredClaimNames.Sub)!);
+
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
+
+        if (user == null)
+        {
+            return NotFound();
+        }
+
+        if (!BCrypt.Net.BCrypt.Verify(request.OldPassword, user.PasswordHash))
+        {
+            return BadRequest("Stara lozinka nije ispravna.");
+        }
+
+        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+        await _context.SaveChangesAsync();
+
+        return Ok(new { message = "Lozinka je uspešno promenjena." });
+    }
+
     [Authorize(Roles = "admin")]
     [HttpGet("admin-only")]
     public IActionResult AdminOnly()
