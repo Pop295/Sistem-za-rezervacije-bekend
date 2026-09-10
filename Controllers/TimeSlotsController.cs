@@ -9,6 +9,14 @@ namespace Bekend.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+/// <summary>
+/// Kontroler za pregled i (admin) ručno upravljanje terminima (TimeSlot).
+/// Napomena: ReservationsController.Create takođe kreira TimeSlot zapise
+/// automatski pri svakoj rezervaciji, pa admin obično ne mora ručno da ih dodaje —
+/// POST/PUT ovde ostaju korisni za izuzetne slučajeve (npr. blokiranje termina
+/// bez stvarne rezervacije). GET je javna ruta jer je koristi kalendar dostupnosti
+/// na frontendu i za goste, ne samo za prijavljene korisnike.
+/// </summary>
 public class TimeSlotsController : ControllerBase
 {
     private readonly AppDbContext _context;
@@ -18,6 +26,7 @@ public class TimeSlotsController : ControllerBase
         _context = context;
     }
 
+    /// <summary>Vraća sve termine (i slobodne i zauzete) iz baze, bez filtriranja po datumu.</summary>
     [HttpGet]
     public async Task<ActionResult<IEnumerable<TimeSlotDto>>> GetAll()
     {
@@ -49,6 +58,11 @@ public class TimeSlotsController : ControllerBase
         return Ok(result);
     }
 
+    /// <summary>
+    /// Admin: ručno kreira termin za dati sto. Isti UNIQUE indeks u bazi
+    /// (uq_service_table_start) koji štiti ReservationsController.Create štiti i ovu
+    /// rutu od pravljenja dva termina za isti sto u istom trenutku (vidi catch ispod).
+    /// </summary>
     [Authorize(Roles = "admin")]
     [HttpPost]
     public async Task<ActionResult<TimeSlotDto>> Create(TimeSlotCreateDto request)
@@ -105,6 +119,7 @@ public class TimeSlotsController : ControllerBase
         return Created($"/api/timeslots/{timeSlot.Id}", result);
     }
 
+    /// <summary>Admin: menja podatke postojećeg termina (uslugu, sto, vreme).</summary>
     [Authorize(Roles = "admin")]
     [HttpPut("{id}")]
     public async Task<ActionResult<TimeSlotDto>> Update(int id, TimeSlotCreateDto request)
@@ -161,6 +176,10 @@ public class TimeSlotsController : ControllerBase
         return Ok(result);
     }
 
+    /// <summary>
+    /// Admin: trajno briše termin (nije soft-delete). Ako termin ima vezanu
+    /// rezervaciju, baza vraća grešku strane veze koju hvatamo kao 409 Conflict.
+    /// </summary>
     [Authorize(Roles = "admin")]
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)

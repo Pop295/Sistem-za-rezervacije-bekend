@@ -45,6 +45,9 @@ builder.Services.AddSwaggerGen(options =>
     });
 }); 
 builder.Services.AddControllers();
+
+// Registruje pozadinski servis koji šalje podsetnike za rezervacije (vidi
+// Services/ReservationReminderService.cs za detaljno objašnjenje kako radi).
 builder.Services.AddHostedService<ReservationReminderService>();
 
 var jwtKey = builder.Configuration["Jwt:Key"]!;
@@ -58,6 +61,10 @@ builder.Services.AddAuthentication(options =>
 })
 .AddJwtBearer(options =>
 {
+    // MapInboundClaims = false sprečava ASP.NET Core da automatski preimenuje
+    // kratke JWT claim-ove (npr. "sub") u duge URI oblike pri ČITANJU tokena.
+    // Bez ovoga, User.FindFirstValue(JwtRegisteredClaimNames.Sub) ne bi pronašao
+    // userId u kontrolerima, jer bi claim bio sačuvan pod drugim imenom.
     options.MapInboundClaims = false;
     options.TokenValidationParameters = new TokenValidationParameters
     {
@@ -71,6 +78,9 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
+// CORS politika koja dozvoljava Vue dev-server-u (Vite, podrazumevani port 5173)
+// da šalje zahteve ka ovom API-ju iz browsera. Za produkciju treba dodati i
+// pravi domen frontenda u WithOrigins pre deploy-a.
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("FrontendPolicy", policy =>

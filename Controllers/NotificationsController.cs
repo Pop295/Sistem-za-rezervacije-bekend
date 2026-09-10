@@ -10,6 +10,12 @@ namespace Bekend.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+/// <summary>
+/// Kontroler za notifikacije prijavljenog korisnika. Same notifikacije se kreiraju
+/// na dva mesta van ovog kontrolera: pri kreiranju rezervacije (ReservationsController.Create)
+/// i automatski, 12h pre termina, iz pozadinskog servisa (ReservationReminderService).
+/// Ovaj kontroler samo čita, označava kao pročitano i briše postojeće notifikacije.
+/// </summary>
 public class NotificationsController : ControllerBase
 {
     private readonly AppDbContext _context;
@@ -19,6 +25,7 @@ public class NotificationsController : ControllerBase
         _context = context;
     }
 
+    /// <summary>Vraća sve notifikacije prijavljenog korisnika, najnovije prve.</summary>
     [Authorize]
     [HttpGet]
     public async Task<ActionResult<IEnumerable<NotificationDto>>> GetAll()
@@ -40,6 +47,10 @@ public class NotificationsController : ControllerBase
         return Ok(notifications);
     }
 
+    /// <summary>
+    /// Označava notifikaciju kao pročitanu. Provera notification.UserId != userId
+    /// sprečava korisnika da (znajući samo Id) označi ili čita tuđu notifikaciju.
+    /// </summary>
     [Authorize]
     [HttpPut("{id}/read")]
     public async Task<ActionResult<NotificationDto>> MarkAsRead(int id)
@@ -72,6 +83,7 @@ public class NotificationsController : ControllerBase
         return Ok(result);
     }
 
+    /// <summary>Trajno briše notifikaciju. Isti vlasnički check kao u MarkAsRead iznad.</summary>
     [Authorize]
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)

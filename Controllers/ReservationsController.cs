@@ -11,6 +11,12 @@ namespace Bekend.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+/// <summary>
+/// Kontroler za kreiranje, pregled, otkazivanje i admin upravljanje rezervacijama.
+/// Svaka rezervacija ima svoj sopstveni TimeSlot (kreira se dinamički pri rezervaciji,
+/// vidi Create() ispod) — termini se ne biraju sa unapred definisane liste, već korisnik
+/// bira uslugu, sto i slobodno vreme početka.
+/// </summary>
 public class ReservationsController : ControllerBase
 {
     private readonly AppDbContext _context;
@@ -20,10 +26,15 @@ public class ReservationsController : ControllerBase
         _context = context;
     }
 
+    /// <summary>
+    /// Vraća listu rezervacija. Obični korisnik vidi samo svoje rezervacije
+    /// (filtrirano po userId iz tokena), dok admin vidi rezervacije svih korisnika.
+    /// </summary>
     [Authorize]
     [HttpGet]
     public async Task<ActionResult<IEnumerable<ReservationDto>>> GetAll()
     {
+        // userId i role se čitaju direktno iz JWT claim-ova, bez dodatnog upita ka bazi
         var userId = int.Parse(User.FindFirstValue(JwtRegisteredClaimNames.Sub)!);
         var role = User.FindFirstValue(ClaimTypes.Role);
 
@@ -60,6 +71,12 @@ public class ReservationsController : ControllerBase
         return Ok(result);
     }
 
+    /// <summary>
+    /// Kreira novu rezervaciju. Umesto biranja postojećeg TimeSlot-a sa liste,
+    /// klijent šalje uslugu, broj stola, datum i vreme početka — TimeSlot se
+    /// generiše "u letu" (vidi ispod). Nakon uspešnog kreiranja automatski se
+    /// šalje i Notification korisniku kao potvrda rezervacije.
+    /// </summary>
     [Authorize]
     [HttpPost]
     public async Task<ActionResult<ReservationDto>> Create(ReservationCreateDto request)
@@ -71,6 +88,8 @@ public class ReservationsController : ControllerBase
             return BadRequest("Neispravan format datuma ili vremena.");
         }
 
+        // Ne dozvoljava rezervaciju termina koji je već prošao (npr. jučerašnji datum
+        // ili današnji, ali sat koji je već bio).
         if (startDateTime < DateTime.Now)
         {
             return BadRequest("Ne možete rezervisati termin koji je već prošao.");
@@ -89,8 +108,15 @@ public class ReservationsController : ControllerBase
             return BadRequest($"Broj stola mora biti izmedju 1 i {service.TableCount}.");
         }
 
+        // Vreme završetka se računa automatski na osnovu trajanja usluge (npr. 60 min).
         var endDateTime = startDateTime.AddMinutes(service.DurationMinutes);
 
+        // Provera preklapanja: da li za ISTI sto (TableNumber) i ISTU uslugu već postoji
+        // zauzet termin (IsAvailable == false) čiji se interval [StartTime, EndTime)
+        // vremenski seče sa novim terminom koji korisnik pokušava da rezerviše.
+        // Ovo je prva linija odbrane od dvostruke rezervacije; druga linija je
+        // UNIQUE indeks u bazi (uq_service_table_start) — vidi catch blok ispod,
+        // koji hvata slučaj kad dva zahteva stignu u isto vreme (race condition).
         var hasOverlap = await _context.TimeSlots
             .AnyAsync(t => t.ServiceId == request.ServiceId
                 && t.TableNumber == request.TableNumber
@@ -103,6 +129,8 @@ public class ReservationsController : ControllerBase
             return Conflict("Taj sto je vec rezervisan u izabranom terminu.");
         }
 
+        // Novi TimeSlot se kreira odmah kao IsAvailable = false, jer je rezervisan
+        // u istom trenutku kad i sama Reservation (vidi objašnjenje overlap provere gore).
         var timeSlot = new TimeSlot
         {
             ServiceId = request.ServiceId,
@@ -130,9 +158,14 @@ public class ReservationsController : ControllerBase
         }
         catch (DbUpdateException)
         {
+            // Ovde upadamo ako je UNIQUE indeks u bazi (uq_service_table_start) odbio upis —
+            // znači da je neko drugi rezervisao isti sto/termin u međuvremenu, posle naše
+            // provere gore, ali pre nego što je naš SaveChanges stigao do baze.
             return Conflict("Taj sto je vec rezervisan u izabranom terminu.");
         }
 
+        // Notifikacija se kreira tek NAKON uspešnog upisa rezervacije, jer nam treba
+        // reservation.Id koji baza dodeljuje tek posle SaveChangesAsync() iznad.
         var notification = new Notification
         {
             UserId = userId,
@@ -159,6 +192,11 @@ public class ReservationsController : ControllerBase
         return Created($"/api/reservations/{reservation.Id}", result);
     }
 
+    /// <summary>
+    /// Otkazuje rezervaciju. Dozvoljeno je samo vlasniku rezervacije ili adminu.
+    /// Otkazivanjem se TimeSlot oslobađa (IsAvailable = true), pa taj sto/termin
+    /// ponovo postaje dostupan za nove rezervacije.
+    /// </summary>
     [Authorize]
     [HttpDelete("{id}")]
     public async Task<IActionResult> Cancel(int id)
@@ -197,6 +235,14 @@ public class ReservationsController : ControllerBase
         return NoContent();
     }
 
+    /// <summary>
+    /// Admin ruta za ručnu promenu statusa rezervacije (npr. "completed" nakon
+    /// odrađene usluge, ili vraćanje iz "cancelled" u "confirmed"). Kad se status
+    /// menja NA "cancelled" ili SA "cancelled" na nešto drugo, TimeSlot.IsAvailable
+    /// se mora ažurirati u skladu s tim (napomena: pri vraćanju iz "cancelled" nazad
+    /// u aktivan status treba postaviti IsAvailable = false, inače sto ostaje
+    /// pogrešno označen kao slobodan).
+    /// </summary>
     [Authorize(Roles = "admin")]
     [HttpPut("{id}/status")]
     public async Task<ActionResult<ReservationDto>> UpdateStatus(int id, ReservationStatusUpdateDto request)

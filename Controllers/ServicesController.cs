@@ -9,6 +9,11 @@ namespace Bekend.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+/// <summary>
+/// Kontroler za usluge/prostorije koje se mogu rezervisati (npr. sala, teren).
+/// Svaka Service ima TableCount — broj dostupnih "stolova" (jedinica) unutar te usluge,
+/// koji ReservationsController koristi da proveri da li je izabrani broj stola validan.
+/// </summary>
 public class ServicesController : ControllerBase
 {
     private readonly AppDbContext _context;
@@ -18,6 +23,10 @@ public class ServicesController : ControllerBase
         _context = context;
     }
 
+    /// <summary>
+    /// Javna ruta (bez [Authorize]) — vraća sve aktivne usluge. Gost može da ih vidi
+    /// bez prijave, u skladu sa zahtevom da neprijavljeni korisnik samo pregleda ponudu.
+    /// </summary>
     [HttpGet]
     public async Task<ActionResult<IEnumerable<ServiceDto>>> GetAll()
     {
@@ -37,6 +46,7 @@ public class ServicesController : ControllerBase
         return Ok(services);
     }
 
+    /// <summary>Vraća pojedinačnu aktivnu uslugu po Id-u, ili 404 ako ne postoji/nije aktivna.</summary>
     [HttpGet("{id}")]
     public async Task<ActionResult<ServiceDto>> GetById(int id)
     {
@@ -61,6 +71,7 @@ public class ServicesController : ControllerBase
         return Ok(service);
     }
 
+    /// <summary>Admin: kreira novu uslugu, uvek kao aktivnu (IsActive = true).</summary>
     [Authorize(Roles = "admin")]
     [HttpPost]
     public async Task<ActionResult<ServiceDto>> Create(ServiceCreateDto request)
@@ -92,6 +103,7 @@ public class ServicesController : ControllerBase
         return CreatedAtAction(nameof(GetById), new { id = service.Id }, result);
     }
 
+    /// <summary>Admin: menja podatke postojeće usluge (naziv, opis, trajanje, cenu, broj stolova).</summary>
     [Authorize(Roles = "admin")]
     [HttpPut("{id}")]
     public async Task<ActionResult<ServiceDto>> Update(int id, ServiceCreateDto request)
@@ -124,6 +136,12 @@ public class ServicesController : ControllerBase
         return Ok(result);
     }
 
+    /// <summary>
+    /// Admin: "briše" uslugu, ali samo soft-delete-om (IsActive = false), a ne
+    /// stvarnim brisanjem reda iz baze. Time se čuvaju stare rezervacije koje se
+    /// referenciraju na ovu uslugu i izbegava se greška strane veze (foreign key)
+    /// pri pokušaju brisanja usluge koja već ima rezervacije.
+    /// </summary>
     [Authorize(Roles = "admin")]
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)

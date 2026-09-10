@@ -10,6 +10,11 @@ namespace Bekend.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+/// <summary>
+/// Kontroler isključivo za administratora — pregled, upravljanje ulogama i
+/// deaktivacija korisničkih naloga. Cela klasa je efektivno admin-only jer
+/// [Authorize(Roles = "admin")] stoji na svakoj ruti pojedinačno.
+/// </summary>
 public class UsersController : ControllerBase
 {
     private readonly AppDbContext _context;
@@ -19,6 +24,7 @@ public class UsersController : ControllerBase
         _context = context;
     }
 
+    /// <summary>Admin: vraća listu svih aktivnih korisnika (deaktivirani se ne prikazuju).</summary>
     [Authorize(Roles = "admin")]
     [HttpGet]
     public async Task<ActionResult<IEnumerable<UserListDto>>> GetAll()
@@ -38,6 +44,7 @@ public class UsersController : ControllerBase
         return Ok(users);
     }
 
+    /// <summary>Admin: vraća pojedinačnog aktivnog korisnika po Id-u.</summary>
     [Authorize(Roles = "admin")]
     [HttpGet("{id}")]
     public async Task<ActionResult<UserListDto>> GetById(int id)
@@ -62,6 +69,10 @@ public class UsersController : ControllerBase
         return Ok(user);
     }
 
+    /// <summary>
+    /// Admin: menja ulogu korisnika (npr. "korisnik" → "admin"). RoleName iz zahteva
+    /// mora tačno odgovarati imenu uloge u bazi (lowercase, "admin"/"korisnik").
+    /// </summary>
     [Authorize(Roles = "admin")]
     [HttpPut("{id}/role")]
     public async Task<ActionResult<UserListDto>> UpdateRole(int id, UserRoleUpdateDto request)
@@ -95,6 +106,11 @@ public class UsersController : ControllerBase
         return Ok(result);
     }
 
+    /// <summary>
+    /// Admin: deaktivira (soft-delete) korisnički nalog — IsActive = false,
+    /// zapis ostaje u bazi radi istorije rezervacija. Admin ne može deaktivirati
+    /// sopstveni nalog (provera ispod), da se ne bi slučajno sam zaključao van sistema.
+    /// </summary>
     [Authorize(Roles = "admin")]
     [HttpDelete("{id}")]
     public async Task<IActionResult> Deactivate(int id)
