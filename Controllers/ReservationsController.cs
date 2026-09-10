@@ -225,6 +225,11 @@ public class ReservationsController : ControllerBase
             reservation.CancelledAt = DateTime.UtcNow;
             reservation.TimeSlot.IsAvailable = true;
         }
+        else
+        {
+            reservation.CancelledAt = null;
+            reservation.TimeSlot.IsAvailable = false;
+        }
 
         await _context.SaveChangesAsync();
 
